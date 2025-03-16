@@ -7,8 +7,10 @@ import (
 	//	"strings"
 	//	"time"
 
+	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
+	"github.com/theHoracle/whatstore-api/app/routes"
 	"github.com/theHoracle/whatstore-api/db/database"
 )
 
@@ -18,11 +20,17 @@ func main() {
 	}
 
 	database.ConnectDB()
+
+	// init clerk
+	clerk.SetKey(os.Getenv("CLERK_SECRET_KEY"))
+	if os.Getenv("CLERK_SECRET_KEY") == "" {
+		log.Fatal("Clerk secret key not set")
+	}
+
 	app := fiber.New()
 
-	app.Get("/api", func(c *fiber.Ctx) error {
-		return c.SendString("Hello whatsapi")
-	})
+	routes.PublicRoutes(app)
+	routes.VendorRoutes(app)
 
 	port := os.Getenv("PORT")
 	if port == "" {

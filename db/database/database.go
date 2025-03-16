@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/theHoracle/whatstore-api/app/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -30,7 +31,15 @@ func ConnectDB() {
 	// TP
 	log.Println("Running migrations")
 
-	//	DB.AutoMigrate()
+	migrationPath := os.Getenv("MIGRATION_PATH")
+	if migrationPath == "" {
+		migrationPath = "./db/migrations" // Default path if env var is not set
+	}
+
+	err = db.AutoMigrate(&models.User{}, &models.Buyer{}, &models.Vendor{})
+	if err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
 
 	DB = DbInstance{Db: db}
 }
