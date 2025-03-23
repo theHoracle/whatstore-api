@@ -10,9 +10,11 @@ import (
 	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
+	swagger "github.com/swaggo/fiber-swagger"
 	"github.com/theHoracle/whatstore-api/app/handlers"
 	"github.com/theHoracle/whatstore-api/app/routes"
 	"github.com/theHoracle/whatstore-api/db/database"
+	_ "github.com/theHoracle/whatstore-api/docs" // This will import the generated docs
 )
 
 func main() {
@@ -29,6 +31,7 @@ func main() {
 	}
 
 	clerkSigningSecret := os.Getenv("CLERK_SIGNING_SECRET")
+	log.Println("Clerk signing secret: " + clerkSigningSecret)
 	if clerkSigningSecret == "" {
 		log.Fatal("Clerk signing secret not set")
 	}
@@ -40,8 +43,11 @@ func main() {
 		return c.Next()
 	})
 
-	// Wehook to sync users with clerk
+	// Webhook to sync users with clerk
 	app.Post("/webhooks/clerk", handlers.ClerkWebhookHandler(database.DB.Db, clerkSigningSecret))
+
+	// Add swagger route
+	app.Get("/swagger/*", swagger.WrapHandler)
 
 	routes.PublicRoutes(app)
 	routes.PrivateRoutes(app, database.DB.Db)

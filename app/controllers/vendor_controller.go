@@ -8,7 +8,18 @@ import (
 	"gorm.io/gorm"
 )
 
-// CreateVendor handles the creation of a new vendor
+// CreateVendor godoc
+// @Summary Create a new vendor account
+// @Description Create a new vendor account with an initial store
+// @Tags vendors
+// @Accept json
+// @Produce json
+// @Param input body object true "Store creation information" SchemaExample({"store_name":"Store Name","store_description":"Store Description","image_url":"http://example.com/image.jpg"})
+// @Success 201 {object} models.Vendor
+// @Failure 400 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /vendors [post]
 func CreateVendor(c *fiber.Ctx) error {
 	db := c.Locals("db").(*gorm.DB)
 	var input struct {
@@ -26,27 +37,65 @@ func CreateVendor(c *fiber.Ctx) error {
 	// Check if user already has a vendor account
 	var existingVendor models.Vendor
 	if err := db.Where("user_id = ?", userID).First(&existingVendor).Error; err == nil {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "User already has a vendor account"})
+		// If user already has a vendor account, create a new store for them
+		store := models.Store{
+			VendorID:    existingVendor.ID,
+			Name:        input.StoreName,
+			Description: input.StoreDescription,
+			ImageURL:    input.ImageURL,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
+
+		if err := db.Create(&store).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		return c.Status(fiber.StatusCreated).JSON(store)
 	}
 
+	// Create new vendor account with initial store
 	vendor := models.Vendor{
-		UserID:           userID,
-		StoreName:        input.StoreName,
-		StoreDescription: input.StoreDescription,
-		ImageURL:         input.ImageURL,
-		IsActive:         false,
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
+		UserID:    userID,
+		IsActive:  false,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	if err := db.Create(&vendor).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	store := models.Store{
+		VendorID:    vendor.ID,
+		Name:        input.StoreName,
+		Description: input.StoreDescription,
+		ImageURL:    input.ImageURL,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	if err := db.Create(&store).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	vendor.Stores = []models.Store{store}
 	return c.Status(fiber.StatusCreated).JSON(vendor)
 }
 
-// UpdateVendor handles updating an existing vendor
+// UpdateVendor godoc
+// @Summary Update vendor details
+// @Description Update an existing vendor's information
+// @Tags vendors
+// @Accept json
+// @Produce json
+// @Param id path string true "Vendor ID"
+// @Success 200 {object} models.Vendor
+// @Failure 400 {object} object{error=string}
+// @Failure 404 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /vendors/{id} [put]
 func UpdateVendor(c *fiber.Ctx) error {
 	db := c.Locals("db").(*gorm.DB)
 	id := c.Params("id")
@@ -69,7 +118,17 @@ func UpdateVendor(c *fiber.Ctx) error {
 	return c.JSON(vendor)
 }
 
-// DeleteVendor handles deleting a vendor
+// DeleteVendor godoc
+// @Summary Delete a vendor
+// @Description Delete a vendor and all associated stores
+// @Tags vendors
+// @Produce json
+// @Param id path string true "Vendor ID"
+// @Success 204 "No Content"
+// @Failure 404 {object} object{error=string}
+// @Failure 500 {object} object{error=string}
+// @Security BearerAuth
+// @Router /vendors/{id} [delete]
 func DeleteVendor(c *fiber.Ctx) error {
 	db := c.Locals("db").(*gorm.DB)
 	id := c.Params("id")
@@ -86,7 +145,15 @@ func DeleteVendor(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-// GetVendor handles fetching a vendor by ID
+// GetVendor godoc
+// @Summary Get vendor details
+// @Description Get detailed information about a vendor
+// @Tags vendors
+// @Produce json
+// @Param id path string true "Vendor ID"
+// @Success 200 {object} models.Vendor
+// @Failure 404 {object} object{error=string}
+// @Router /vendors/{id} [get]
 func GetVendor(c *fiber.Ctx) error {
 	db := c.Locals("db").(*gorm.DB)
 	id := c.Params("id")
@@ -99,7 +166,14 @@ func GetVendor(c *fiber.Ctx) error {
 	return c.JSON(vendor)
 }
 
-// GetAllVendors handles fetching all vendors with pagination
+// GetAllVendors godoc
+// @Summary List all vendors
+// @Description Get a list of all vendors
+// @Tags vendors
+// @Produce json
+// @Success 200 {array} models.Vendor
+// @Failure 500 {object} object{error=string}
+// @Router /vendors [get]
 func GetAllVendors(c *fiber.Ctx) error {
 	db := c.Locals("db").(*gorm.DB)
 	var vendors []models.Vendor
