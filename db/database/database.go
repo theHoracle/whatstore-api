@@ -36,7 +36,7 @@ func ConnectDB() {
 		migrationPath = "./db/migrations" // Default path if env var is not set
 	}
 
-	err = db.AutoMigrate(&models.User{}, &models.Buyer{}, &models.Vendor{})
+	err = db.AutoMigrate(&models.User{}, &models.Vendor{})
 	if err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
