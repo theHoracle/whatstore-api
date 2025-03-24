@@ -15,7 +15,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param id path string true "Store ID"
-// @Param input body object true "Store update information" SchemaExample({"name":"Store Name","description":"Store Description","image_url":"http://example.com/image.jpg"})
+// @Param input body object true "Store update information" SchemaExample({"name":"Store Name","description":"Store Description","store_logo":"http://example.com/image.jpg"})
 // @Success 200 {object} models.Store
 // @Failure 400 {object} object{error=string}
 // @Failure 403 {object} object{error=string}
@@ -46,7 +46,7 @@ func UpdateStore(c *fiber.Ctx) error {
 	var input struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
-		ImageURL    string `json:"image_url"`
+		StoreLogo   string `json:"store_logo"`
 	}
 
 	if err := c.BodyParser(&input); err != nil {
@@ -55,7 +55,7 @@ func UpdateStore(c *fiber.Ctx) error {
 
 	store.Name = input.Name
 	store.Description = input.Description
-	store.ImageURL = input.ImageURL
+	store.StoreLogo = input.StoreLogo
 	store.UpdatedAt = time.Now()
 
 	if err := db.Save(&store).Error; err != nil {

@@ -14,7 +14,7 @@ import (
 // @Tags vendors
 // @Accept json
 // @Produce json
-// @Param input body object true "Store creation information" SchemaExample({"store_name":"Store Name","store_description":"Store Description","image_url":"http://example.com/image.jpg"})
+// @Param input body object true "Store creation information" SchemaExample({"store_name":"Store Name","store_description":"Store Description","store_logo":"http://example.com/image.jpg"})
 // @Success 201 {object} models.Vendor
 // @Failure 400 {object} object{error=string}
 // @Failure 500 {object} object{error=string}
@@ -25,7 +25,7 @@ func CreateVendor(c *fiber.Ctx) error {
 	var input struct {
 		StoreName        string `json:"store_name" binding:"required"`
 		StoreDescription string `json:"store_description" binding:"required"`
-		ImageURL         string `json:"image_url" binding:"required"`
+		StoreLogo        string `json:"store_logo" binding:"required"`
 	}
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -42,7 +42,7 @@ func CreateVendor(c *fiber.Ctx) error {
 			VendorID:    existingVendor.ID,
 			Name:        input.StoreName,
 			Description: input.StoreDescription,
-			ImageURL:    input.ImageURL,
+			StoreLogo:   input.StoreLogo,
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
@@ -70,7 +70,7 @@ func CreateVendor(c *fiber.Ctx) error {
 		VendorID:    vendor.ID,
 		Name:        input.StoreName,
 		Description: input.StoreDescription,
-		ImageURL:    input.ImageURL,
+		StoreLogo:   input.StoreLogo,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}

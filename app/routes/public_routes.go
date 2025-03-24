@@ -11,4 +11,11 @@ func PublicRoutes(a *fiber.App) {
 	publicRoutes.Get("/vendors", controllers.GetAllVendors)
 	publicRoutes.Get("/vendors/:id", controllers.GetVendor)
 
+	// Product routes
+	publicRoutes.Get("/products", controllers.GetAllProducts)
+	publicRoutes.Get("/products/search", controllers.SearchProducts)
+
+	// Service routes
+	publicRoutes.Get("/services", controllers.GetAllServices)
+	publicRoutes.Get("/services/search", controllers.SearchServices)
 }
