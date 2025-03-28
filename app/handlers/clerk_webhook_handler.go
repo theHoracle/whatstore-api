@@ -65,34 +65,84 @@ func ClerkWebhookHandler(db *gorm.DB, signingSecret string) fiber.Handler {
 		// Handle each event type
 		switch event.Type {
 		case "user.created":
+			// Define a struct that matches Clerk's JSON structure
 			var clerkUser struct {
-				ID       string `json:"id"`
-				Email    string `json:"email_addresses[0].email_address"`
-				Username string `json:"username"`
+				ID             string `json:"id"`
+				FirstName      string `json:"first_name"`
+				LastName       string `json:"last_name"`
+				Username       string `json:"username"`
+				ImageURL       string `json:"profile_image_url"`
+				EmailAddresses []struct {
+					EmailAddress string `json:"email_address"`
+				} `json:"email_addresses"`
 			}
+
+			// Debug print the raw data
+			log.Printf("Raw webhook data: %s", string(event.Data))
+
 			if err := json.Unmarshal(event.Data, &clerkUser); err != nil {
+				log.Printf("Error unmarshaling user data: %v", err)
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-					"error": "Invalid user data",
+					"error": "Invalid user data: " + err.Error(),
 				})
 			}
+
+			// Debug print the parsed data
+			log.Printf("Parsed clerk user: %+v", clerkUser)
+
+			// Extract email from the first email address if available
+			email := ""
+			if len(clerkUser.EmailAddresses) > 0 {
+				email = clerkUser.EmailAddresses[0].EmailAddress
+			}
+
+			// Validate required fields
+			if email == "" {
+				log.Printf("No email address found in webhook data")
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "No email address provided",
+				})
+			}
+
+			if clerkUser.Username == "" {
+				log.Printf("No username found in webhook data")
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "No username provided",
+				})
+			}
+
 			// Create the user in the database
 			newUser := models.User{
-				ClerkID:  clerkUser.ID,
-				Email:    clerkUser.Email,
-				Username: clerkUser.Username,
+				ClerkID:   clerkUser.ID,
+				Name:      clerkUser.FirstName + " " + clerkUser.LastName,
+				Email:     email,
+				Username:  clerkUser.Username,
+				AvatarURL: clerkUser.ImageURL,
 			}
+
+			// Debug print the user we're about to create
+			log.Printf("Creating user with data: %+v", newUser)
+
 			if err := db.Create(&newUser).Error; err != nil {
 				log.Printf("Failed to create user: %v", err)
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to create user",
+					"error": "Failed to create user: " + err.Error(),
 				})
 			}
 
 		case "user.updated":
+			// Update the user.updated case with similar structure
 			var clerkUser struct {
-				ID    string `json:"id"`
-				Email string `json:"email_addresses[0].email_address"`
+				ID             string `json:"id"`
+				FirstName      string `json:"first_name"`
+				LastName       string `json:"last_name"`
+				Username       string `json:"username"`
+				ImageURL       string `json:"profile_image_url"`
+				EmailAddresses []struct {
+					EmailAddress string `json:"email_address"`
+				} `json:"email_addresses"`
 			}
+
 			if err := json.Unmarshal(event.Data, &clerkUser); err != nil {
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Invalid user data",
@@ -106,7 +156,7 @@ func ClerkWebhookHandler(db *gorm.DB, signingSecret string) fiber.Handler {
 					"error": "User not found",
 				})
 			}
-			user.Email = clerkUser.Email
+			user.Email = clerkUser.EmailAddresses[0].EmailAddress
 			if err := db.Save(&user).Error; err != nil {
 				log.Printf("Failed to update user: %v", err)
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

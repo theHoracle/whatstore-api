@@ -8,6 +8,7 @@ type User struct {
 	Name        string       `json:"name"`
 	Email       string       `gorm:"uniqueIndex" json:"email"`
 	Username    string       `gorm:"uniqueIndex" json:"username"`
+	AvatarURL   string       `json:"avatar_url"`
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
 	Vendor      *Vendor      `gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL" json:"vendor,omitempty"`
