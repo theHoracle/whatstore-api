@@ -12,6 +12,7 @@ type User struct {
 	UpdatedAt   time.Time    `json:"updated_at"`
 	Vendor      *Vendor      `gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL" json:"vendor,omitempty"`
 	UserDetails *UserDetails `gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL" json:"user_details,omitempty"`
+	Orders      []Order      `json:"orders,omitempty"`
 }
 
 type UserDetails struct {
