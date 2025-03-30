@@ -10,5 +10,5 @@ func VendorRoutes(app fiber.Router) {
 	app.Put("/vendors/:id", controllers.UpdateVendor)
 	app.Delete("/vendors/:id", controllers.DeleteVendor)
 	app.Get("/vendors/:id", controllers.GetVendor)
-	app.Get("/vendors", controllers.GetAllVendors)
+	// app.Get("/vendors", controllers.GetAllVendors)
 }

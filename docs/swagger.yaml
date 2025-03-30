@@ -15,8 +15,116 @@ definitions:
       total_pages:
         type: integer
     type: object
+  models.CreateOrderRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.OrderItem'
+        type: array
+    type: object
+  models.CreateProductRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      image_url:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      stock:
+        minimum: 0
+        type: integer
+    required:
+    - image_url
+    - name
+    - price
+    - stock
+    type: object
+  models.CreateVendorRequest:
+    properties:
+      store_description:
+        type: string
+      store_logo:
+        type: string
+      store_name:
+        type: string
+    required:
+    - store_description
+    - store_logo
+    - store_name
+    type: object
+  models.DashboardStats:
+    properties:
+      total_orders:
+        type: integer
+      total_products:
+        type: integer
+      total_users:
+        type: integer
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  models.Order:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      items:
+        description: Added proper GORM relationship
+        items:
+          $ref: '#/definitions/models.OrderItem'
+        type: array
+      payment_id:
+        type: string
+      status:
+        $ref: '#/definitions/models.OrderStatus'
+      store_id:
+        type: integer
+      total_amount:
+        type: number
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  models.OrderItem:
+    properties:
+      id:
+        type: integer
+      order_id:
+        type: integer
+      price:
+        description: Price at time of order
+        type: number
+      product:
+        $ref: '#/definitions/models.Product'
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+    type: object
+  models.OrderStatus:
+    enum:
+    - pending
+    - success
+    - rejected
+    type: string
+    x-enum-varnames:
+    - OrderStatusPending
+    - OrderStatusSuccess
+    - OrderStatusRejected
   models.Product:
     properties:
+      category:
+        description: We will create availabel categories later
+        type: string
       created_at:
         type: string
       currency:
@@ -31,6 +139,8 @@ definitions:
         type: string
       price:
         type: number
+      stock:
+        type: integer
       store_id:
         type: integer
       updated_at:
@@ -82,6 +192,84 @@ definitions:
       vendor_id:
         type: integer
     type: object
+  models.UpdateOrderStatusRequest:
+    properties:
+      status:
+        enum:
+        - pending
+        - processing
+        - shipped
+        - delivered
+        - cancelled
+        type: string
+    required:
+    - status
+    type: object
+  models.UpdateProductRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      stock:
+        minimum: 0
+        type: integer
+    type: object
+  models.UpdateUserRequest:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+    type: object
+  models.User:
+    properties:
+      avatar_url:
+        type: string
+      clerk_id:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      orders:
+        items:
+          $ref: '#/definitions/models.Order'
+        type: array
+      updated_at:
+        type: string
+      user_details:
+        $ref: '#/definitions/models.UserDetails'
+      username:
+        type: string
+      vendor:
+        $ref: '#/definitions/models.Vendor'
+    type: object
+  models.UserDetails:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      preferred_payment:
+        type: string
+      shipping_address:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
   models.Vendor:
     properties:
       created_at:
@@ -102,6 +290,397 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/admin/orders:
+    get:
+      consumes:
+      - application/json
+      description: Get all orders for admin dashboard
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/controllers.PaginationResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Order'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all orders (admin)
+      tags:
+      - admin
+  /api/v1/admin/orders/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Update the status of an order
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New order status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateOrderStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Order'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update order status (admin)
+      tags:
+      - admin
+  /api/v1/admin/products/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing product (admin only)
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a product
+      tags:
+      - admin-products
+    put:
+      consumes:
+      - application/json
+      description: Update an existing product (admin only)
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Product update data
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a product
+      tags:
+      - admin-products
+  /api/v1/admin/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get statistics for admin dashboard
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.DashboardStats'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get admin dashboard stats
+      tags:
+      - admin
+  /api/v1/orders:
+    get:
+      consumes:
+      - application/json
+      description: Get all orders for the authenticated user
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/controllers.PaginationResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Order'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user orders
+      tags:
+      - orders
+    post:
+      consumes:
+      - application/json
+      description: Create a new order for the authenticated user
+      parameters:
+      - description: Order creation data
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Order'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create new order
+      tags:
+      - orders
+  /api/v1/orders/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific order
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Order'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get order details
+      tags:
+      - orders
+  /api/v1/products/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get product details by ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a single product
+      tags:
+      - products
+  /api/v1/stores/{storeId}/products:
+    post:
+      consumes:
+      - application/json
+      description: Create a new product for a specific store
+      parameters:
+      - description: Store ID
+        in: path
+        name: storeId
+        required: true
+        type: string
+      - description: Product creation data
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new product
+      tags:
+      - store-products
+  /api/v1/users/me:
+    get:
+      consumes:
+      - application/json
+      description: Get the profile of the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update the profile of the authenticated user
+      parameters:
+      - description: User profile update data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - users
   /products:
     get:
       description: Get a list of all available products with pagination support
@@ -349,12 +928,12 @@ paths:
       - application/json
       description: Create a new vendor account with an initial store
       parameters:
-      - description: Store creation information
+      - description: Vendor store details
         in: body
         name: input
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/models.CreateVendorRequest'
       produces:
       - application/json
       responses:
@@ -365,17 +944,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            properties:
-              error:
-                type: string
-            type: object
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            properties:
-              error:
-                type: string
-            type: object
+            $ref: '#/definitions/models.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new vendor account

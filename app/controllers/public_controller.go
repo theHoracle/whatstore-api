@@ -3,36 +3,11 @@ package controllers
 import (
 	"fmt"
 	"math"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/theHoracle/whatstore-api/app/models"
 	"gorm.io/gorm"
 )
-
-type PaginationResponse struct {
-	Data        any   `json:"data"`
-	Total       int64 `json:"total"`
-	Page        int   `json:"page"`
-	PerPage     int   `json:"per_page"`
-	TotalPages  int   `json:"total_pages"`
-	HasNext     bool  `json:"has_next"`
-	HasPrevious bool  `json:"has_previous"`
-}
-
-func paginate(c *fiber.Ctx) (int, int) {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	if page < 1 {
-		page = 1
-	}
-
-	perPage, _ := strconv.Atoi(c.Query("per_page", "10"))
-	if perPage < 1 {
-		perPage = 10
-	}
-
-	return page, perPage
-}
 
 // GetAllProducts godoc
 // @Summary Get all products with pagination

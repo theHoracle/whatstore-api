@@ -14,25 +14,15 @@ import (
 // @Tags vendors
 // @Accept json
 // @Produce json
-//
-//	@Param input body struct {
-//		StoreName        string `json:"store_name" binding:"required"`
-//		StoreDescription string `json:"store_description" binding:"required"`
-//		StoreLogo        string `json:"store_logo" binding:"required"`
-//	} true "Vendor details"
-//
+// @Param input body models.CreateVendorRequest true "Vendor store details"
 // @Success 201 {object} models.Vendor
-// @Failure 400 {object} object{error=string}
-// @Failure 500 {object} object{error=string}
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Security BearerAuth
 // @Router /vendors [post]
 func CreateVendor(c *fiber.Ctx) error {
 	db := c.Locals("db").(*gorm.DB)
-	var input struct {
-		StoreName        string `json:"store_name" binding:"required"`
-		StoreDescription string `json:"store_description" binding:"required"`
-		StoreLogo        string `json:"store_logo" binding:"required"`
-	}
+	var input models.CreateVendorRequest
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}

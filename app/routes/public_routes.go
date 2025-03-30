@@ -5,17 +5,27 @@ import (
 	"github.com/theHoracle/whatstore-api/app/controllers"
 )
 
-func PublicRoutes(a *fiber.App) {
-	publicRoutes := a.Group("/api")
+func PublicRoutes(app *fiber.App) {
+	// API group with version
+	api := app.Group("/api/v1")
 
-	publicRoutes.Get("/vendors", controllers.GetAllVendors)
-	publicRoutes.Get("/vendors/:id", controllers.GetVendor)
+	// Products endpoints
+	products := api.Group("/products")
+	{
+		products.Get("/", controllers.GetAllProducts)       // List all products
+		products.Get("/:id", controllers.GetProduct)        // Get single product
+		products.Get("/search", controllers.SearchProducts) // Search products
+	}
 
-	// Product routes
-	publicRoutes.Get("/products", controllers.GetAllProducts)
-	publicRoutes.Get("/products/search", controllers.SearchProducts)
+	// Categories endpoints
+	// categories := api.Group("/categories")
+	// {
+	// 	categories.Get("/", controllers.GetCategories)   // List all categories
+	// 	categories.Get("/:id", controllers.GetCategory)  // Get single category
+	// }
 
-	// Service routes
-	publicRoutes.Get("/services", controllers.GetAllServices)
-	publicRoutes.Get("/services/search", controllers.SearchServices)
+	// Health check
+	api.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"status": "ok"})
+	})
 }

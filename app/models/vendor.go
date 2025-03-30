@@ -31,6 +31,8 @@ type Product struct {
 	ImageURL     string    `json:"image_url"`
 	Price        float64   `json:"price"`
 	Currency     string    `json:"currency" gorm:"default:NGN"`
+	Stock        int       `json:"stock"`
+	Category     string    `json:"category"` // We will create availabel categories later
 	SearchVector string    `gorm:"type:tsvector;index:idx_products_search,type:gin" json:"-"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`

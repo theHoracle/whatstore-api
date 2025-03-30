@@ -1,64 +1,195 @@
 package controllers
 
 import (
-	"errors"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/theHoracle/whatstore-api/app/models"
 	"github.com/theHoracle/whatstore-api/db/database"
+	"gorm.io/gorm"
 )
 
+// GetUserOrders godoc
+// @Summary Get user orders
+// @Description Get all orders for the authenticated user
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param per_page query int false "Items per page"
+// @Success 200 {object} PaginationResponse{data=[]models.Order}
+// @Failure 401 {object} models.ErrorResponse
+// @Router /api/v1/orders [get]
+func GetUserOrders(c *fiber.Ctx) error {
+	user := c.Locals("user").(*models.User)
+	db := c.Locals("db").(*gorm.DB)
+	page, perPage := paginate(c)
+
+	var orders []models.Order
+	var total int64
+
+	db.Model(&models.Order{}).Where("user_id = ?", user.ID).Count(&total)
+	query := db.Where("user_id = ?", user.ID).Offset((page - 1) * perPage).Limit(perPage)
+	if err := query.Find(&orders).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch orders",
+		})
+	}
+
+	return c.JSON(NewPaginationResponse(orders, total, page, perPage))
+}
+
+// CreateOrder godoc
+// @Summary Create new order
+// @Description Create a new order for the authenticated user
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param order body models.CreateOrderRequest true "Order creation data"
+// @Success 201 {object} models.Order
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/orders [post]
 func CreateOrder(c *fiber.Ctx) error {
-	// Get current user from context
-	user := c.Locals("user").(models.User)
+	user := c.Locals("user").(*models.User)
+	db := c.Locals("db").(*gorm.DB)
 
-	order := new(models.Order)
-	if err := c.BodyParser(order); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
+	var orderRequest models.CreateOrderRequest
+	if err := c.BodyParser(&orderRequest); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
 	}
 
-	// Set user ID
-	order.UserID = user.ID
+	// Start a transaction
+	tx := db.Begin()
 
-	// Validate all products belong to same store
-	if err := validateOrderProducts(order); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	order := models.Order{
+		UserID: user.ID,
+		Status: models.OrderStatusPending,
 	}
 
-	// Create order in pending state
-	db := database.DB.Db
-	if err := db.Create(&order).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create order"})
+	// First create the order
+	if err := tx.Create(&order).Error; err != nil {
+		tx.Rollback()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create order",
+		})
+	}
+
+	var totalAmount float64
+	var orderItems []models.OrderItem
+
+	// Get all products and create order items
+	for _, item := range orderRequest.Items {
+		var product models.Product
+		if err := tx.First(&product, item.ProductID).Error; err != nil {
+			tx.Rollback()
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Product not found: " + strconv.Itoa(int(item.ProductID)),
+			})
+		}
+
+		// Set store ID from first product if not set
+		if order.StoreID == 0 {
+			order.StoreID = product.StoreID
+		} else if order.StoreID != product.StoreID {
+			tx.Rollback()
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "All products must be from the same store",
+			})
+		}
+
+		orderItem := models.OrderItem{
+			OrderID:   order.ID,
+			ProductID: product.ID,
+			Quantity:  item.Quantity,
+			Price:     product.Price, // Store current price
+		}
+
+		orderItems = append(orderItems, orderItem)
+		totalAmount += product.Price * float64(item.Quantity)
+	}
+
+	// Update order with total and store ID
+	order.TotalAmount = totalAmount
+	if err := tx.Save(&order).Error; err != nil {
+		tx.Rollback()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update order",
+		})
+	}
+
+	// Create all order items
+	if err := tx.Create(&orderItems).Error; err != nil {
+		tx.Rollback()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create order items",
+		})
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to commit transaction",
+		})
+	}
+
+	// Fetch complete order with items
+	if err := db.Preload("Items.Product").First(&order, order.ID).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch created order",
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(order)
+}
+
+// GetOrder godoc
+// @Summary Get order details
+// @Description Get details of a specific order
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Order ID"
+// @Success 200 {object} models.Order
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Router /api/v1/orders/{id} [get]
+func GetOrder(c *fiber.Ctx) error {
+	user := c.Locals("user").(*models.User)
+	db := c.Locals("db").(*gorm.DB)
+	orderID := c.Params("id")
+
+	var order models.Order
+	if err := db.Where("id = ? AND user_id = ?", orderID, user.ID).First(&order).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Order not found",
+		})
 	}
 
 	return c.JSON(order)
 }
 
-func validateOrderProducts(order *models.Order) error {
-	if len(order.Items) == 0 {
-		return errors.New("order has no products")
-	}
+// TODO: Use to validate order products
+// func validateOrderProducts(order *models.Order) error {
+// 	if len(order.Items) == 0 {
+// 		return errors.New("order has no products")
+// 	}
 
-	storeID := order.Items[0].Product.StoreID
-	for _, product := range order.Items {
-		if product.Product.StoreID != storeID {
-			return errors.New("all products must belong to the same store")
-		}
-	}
+// 	storeID := order.Items[0].StoreID
+// 	for _, product := range order.Items {
+// 		if product.StoreID != storeID {
+// 			return errors.New("all products must belong to the same store")
+// 		}
+// 	}
 
-	return nil
-}
-
-func GetUserOrders(c *fiber.Ctx) error {
-	user := c.Locals("user").(models.User)
-
-	var orders []models.Order
-	if err := database.DB.Db.Where("user_id = ?", user.ID).Find(&orders).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch orders"})
-	}
-
-	return c.JSON(orders)
-}
+// 	return nil
+// }
 
 func GetStoreOrders(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)

@@ -3,12 +3,11 @@ package main
 import (
 	"log"
 	"os"
-
-	//	"strings"
-	//	"time"
+	"time"
 
 	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/joho/godotenv"
 	swagger "github.com/swaggo/fiber-swagger"
 	"github.com/theHoracle/whatstore-api/app/handlers"
@@ -38,17 +37,40 @@ func main() {
 
 	app := fiber.New()
 
+	// Add rate limiter middleware
+	app.Use(limiter.New(limiter.Config{
+		Next: func(c *fiber.Ctx) bool {
+			// skip if non localhost
+			return c.IP() == "127.0.0.1"
+		},
+		Max:        100,             // max number of requests
+		Expiration: 1 * time.Minute, // per 1 minute
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP() // use IP as key for rate limiting
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Too many requests",
+			})
+		},
+	}))
+
+	// Global middleware
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("db", database.DB.Db)
 		return c.Next()
 	})
 
-	// Webhook to sync users with clerk
-	app.Post("/webhooks/clerk", handlers.ClerkWebhookHandler(database.DB.Db, clerkSigningSecret))
-
-	// Add swagger route
+	// Documentation routes
 	app.Get("/swagger/*", swagger.WrapHandler)
 
+	// Webhooks
+	webhooks := app.Group("/webhooks")
+	{
+		webhooks.Post("/clerk", handlers.ClerkWebhookHandler(database.DB.Db, clerkSigningSecret))
+	}
+
+	// Setup API routes
 	routes.PublicRoutes(app)
 	routes.PrivateRoutes(app, database.DB.Db)
 
