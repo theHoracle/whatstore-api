@@ -14,7 +14,13 @@ import (
 // @Tags vendors
 // @Accept json
 // @Produce json
-// @Param input body object true "Store creation information" SchemaExample({"store_name":"Store Name","store_description":"Store Description","store_logo":"http://example.com/image.jpg"})
+//
+//	@Param input body struct {
+//		StoreName        string `json:"store_name" binding:"required"`
+//		StoreDescription string `json:"store_description" binding:"required"`
+//		StoreLogo        string `json:"store_logo" binding:"required"`
+//	} true "Vendor details"
+//
 // @Success 201 {object} models.Vendor
 // @Failure 400 {object} object{error=string}
 // @Failure 500 {object} object{error=string}

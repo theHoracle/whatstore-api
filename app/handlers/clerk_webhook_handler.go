@@ -78,7 +78,7 @@ func ClerkWebhookHandler(db *gorm.DB, signingSecret string) fiber.Handler {
 			}
 
 			// Debug print the raw data
-			log.Printf("Raw webhook data: %s", string(event.Data))
+			// log.Printf("Raw webhook data: %s", string(event.Data))
 
 			if err := json.Unmarshal(event.Data, &clerkUser); err != nil {
 				log.Printf("Error unmarshaling user data: %v", err)
@@ -88,7 +88,7 @@ func ClerkWebhookHandler(db *gorm.DB, signingSecret string) fiber.Handler {
 			}
 
 			// Debug print the parsed data
-			log.Printf("Parsed clerk user: %+v", clerkUser)
+			// log.Printf("Parsed clerk user: %+v", clerkUser)
 
 			// Extract email from the first email address if available
 			email := ""
@@ -101,6 +101,13 @@ func ClerkWebhookHandler(db *gorm.DB, signingSecret string) fiber.Handler {
 				log.Printf("No email address found in webhook data")
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "No email address provided",
+				})
+			}
+
+			if clerkUser.ID == "" {
+				log.Printf("No Clerk ID found in webhook data")
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "No Clerk ID provided",
 				})
 			}
 

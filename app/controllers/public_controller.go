@@ -11,13 +11,13 @@ import (
 )
 
 type PaginationResponse struct {
-	Data        interface{} `json:"data"`
-	Total       int64       `json:"total"`
-	Page        int         `json:"page"`
-	PerPage     int         `json:"per_page"`
-	TotalPages  int         `json:"total_pages"`
-	HasNext     bool        `json:"has_next"`
-	HasPrevious bool        `json:"has_previous"`
+	Data        any   `json:"data"`
+	Total       int64 `json:"total"`
+	Page        int   `json:"page"`
+	PerPage     int   `json:"per_page"`
+	TotalPages  int   `json:"total_pages"`
+	HasNext     bool  `json:"has_next"`
+	HasPrevious bool  `json:"has_previous"`
 }
 
 func paginate(c *fiber.Ctx) (int, int) {

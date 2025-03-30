@@ -42,6 +42,9 @@ func ConnectDB() {
 	// Setup full-text search
 	setupFullTextSearch(db)
 
+	// Add common indexes
+	createIndexes(db)
+
 	DB = DbInstance{Db: db}
 }
 
@@ -74,6 +77,33 @@ func setupFullTextSearch(db *gorm.DB) {
 	for _, stmt := range statements {
 		if err := db.Exec(stmt).Error; err != nil {
 			log.Printf("Warning: Error executing search setup statement: %v", err)
+		}
+	}
+}
+
+func createIndexes(db *gorm.DB) {
+	indexes := []string{
+		// Orders
+		`CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);`,
+		`CREATE INDEX IF NOT EXISTS idx_orders_store_id ON orders(store_id);`,
+		`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);`,
+
+		// Store
+		`CREATE INDEX IF NOT EXISTS idx_stores_vendor_id ON stores(vendor_id);`,
+
+		// Products
+		`CREATE INDEX IF NOT EXISTS idx_products_store_id ON products(store_id);`,
+
+		// Services
+		`CREATE INDEX IF NOT EXISTS idx_services_store_id ON services(store_id);`,
+
+		// Vendors
+		`CREATE INDEX IF NOT EXISTS idx_vendors_user_id ON vendors(user_id);`,
+	}
+
+	for _, idx := range indexes {
+		if err := db.Exec(idx).Error; err != nil {
+			log.Printf("Warning: Error creating index: %v", err)
 		}
 	}
 }
