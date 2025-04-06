@@ -44,18 +44,25 @@ func UpdateStore(c *fiber.Ctx) error {
 	}
 
 	var input struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		StoreLogo   string `json:"store_logo"`
+		Name                 string `json:"name"`
+		Description          string `json:"description"`
+		StoreLogo            string `json:"store_logo"`
+		StoreUrl             string `json:"store_url"`
+		StoreAddress         string `json:"store_address"`
+		StoreWhatsappContact string `json:"store_whatsapp_contact"`
 	}
 
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
+	// Update all fields
 	store.Name = input.Name
 	store.Description = input.Description
 	store.StoreLogo = input.StoreLogo
+	store.StoreUrl = input.StoreUrl
+	store.StoreAddress = input.StoreAddress
+	store.StoreWhatsappContact = input.StoreWhatsappContact
 	store.UpdatedAt = time.Now()
 
 	if err := db.Save(&store).Error; err != nil {
@@ -97,8 +104,25 @@ func DeleteStore(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not authorized to delete this store"})
 	}
 
+	// Delete all associated products and services
+	if err := db.Where("store_id = ?", store.ID).Delete(&models.Product{}).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not delete products"})
+	}
+
 	if err := db.Delete(&store).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not delete store"})
+	}
+
+	// if vendor has no store set vendor.isActive to false
+	var vendorStores []models.Store
+	if err := db.Where("vendor_id = ?", vendorStore.ID).Find(&vendorStores).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch vendor stores"})
+	}
+	if len(vendorStores) == 0 {
+		vendorStore.IsActive = false
+		if err := db.Save(&vendorStore).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not update vendor"})
+		}
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)

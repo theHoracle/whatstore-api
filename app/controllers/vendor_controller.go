@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -22,10 +24,10 @@ import (
 // @Router /vendors [post]
 func CreateVendor(c *fiber.Ctx) error {
 	db := c.Locals("db").(*gorm.DB)
-	var input models.CreateVendorRequest
-	if err := c.BodyParser(&input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
+	// var input models.CreateVendorRequest
+	// if err := c.BodyParser(&input); err != nil {
+	// 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	// }
 
 	user := c.Locals("user").(*models.User)
 	userID := user.ID
@@ -33,49 +35,16 @@ func CreateVendor(c *fiber.Ctx) error {
 	// Check if user already has a vendor account
 	var existingVendor models.Vendor
 	if err := db.Where("user_id = ?", userID).First(&existingVendor).Error; err == nil {
-		// If user already has a vendor account, create a new store for them
-		store := models.Store{
-			VendorID:    existingVendor.ID,
-			Name:        input.StoreName,
-			Description: input.StoreDescription,
-			StoreLogo:   input.StoreLogo,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-		}
-
-		if err := db.Create(&store).Error; err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		}
-
-		return c.Status(fiber.StatusCreated).JSON(store)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User already has a vendor account"})
 	}
 
-	// Create new vendor account with initial store
 	vendor := models.Vendor{
 		UserID:    userID,
-		IsActive:  false,
+		IsActive:  true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 
-	if err := db.Create(&vendor).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	store := models.Store{
-		VendorID:    vendor.ID,
-		Name:        input.StoreName,
-		Description: input.StoreDescription,
-		StoreLogo:   input.StoreLogo,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-
-	if err := db.Create(&store).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	vendor.Stores = []models.Store{store}
 	return c.Status(fiber.StatusCreated).JSON(vendor)
 }
 
@@ -179,4 +148,71 @@ func GetAllVendors(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(vendors)
+}
+
+// CreateStore godoc
+// @Summary Create a new store
+// @Description Create a new store for the authenticated vendor
+// @Tags stores
+// @Accept json
+// @Produce json
+// @Param input body models.CreateStoreRequest true "Store details"
+// @Success 201 {object} models.Store
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Security BearerAuth
+// @Router /vendors/store [post]
+func CreateStore(c *fiber.Ctx) error {
+	db := c.Locals("db").(*gorm.DB)
+	user := c.Locals("user").(*models.User)
+
+	var input models.CreateStoreRequest
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Get vendor information for the authenticated user
+	var vendor models.Vendor
+	if err := db.Where("user_id = ?", user.ID).First(&vendor).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Vendor account not found"})
+	}
+
+	// Validate the phone number format
+	if err := VaidatePhoneNumber(input.StoreWhatsappContact); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid phone number format"})
+	}
+	// Check if the store URL is already taken
+	var existingStore models.Store
+	if err := db.Where("store_url = ?", input.StoreUrl).First(&existingStore).Error; err == nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Store URL already taken"})
+	}
+
+	store := models.Store{
+		VendorID:             vendor.ID,
+		Name:                 input.StoreName,
+		Description:          input.StoreDescription,
+		StoreLogo:            input.StoreLogo,
+		StoreUrl:             input.StoreUrl,
+		StoreAddress:         input.StoreAddress,
+		StoreWhatsappContact: input.StoreWhatsappContact,
+		CreatedAt:            time.Now(),
+		UpdatedAt:            time.Now(),
+	}
+
+	if err := db.Create(&store).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(store)
+}
+
+var e164Regex = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
+
+func VaidatePhoneNumber(phone string) error {
+	// Check if the phone number matches the E.164 format
+	if !e164Regex.MatchString(phone) {
+		return fmt.Errorf("invalid phone number format")
+	}
+	return nil
 }

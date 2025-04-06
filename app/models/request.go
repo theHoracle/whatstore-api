@@ -38,7 +38,14 @@ type UpdateProductRequest struct {
 }
 
 type CreateVendorRequest struct {
-	StoreName        string `json:"store_name" validate:"required"`
-	StoreDescription string `json:"store_description" validate:"required"`
-	StoreLogo        string `json:"store_logo" validate:"required"`
+	User User `json:"user"`
+}
+
+type CreateStoreRequest struct {
+	StoreName            string `json:"store_name" validate:"required"`
+	StoreDescription     string `json:"store_description" validate:"required"`
+	StoreLogo            string `json:"store_logo" validate:"required"`
+	StoreUrl             string `json:"store_url" validate:"required"`
+	StoreAddress         string `json:"store_address" validate:"required"`
+	StoreWhatsappContact string `json:"store_whatsapp_contact" validate:"required"`
 }

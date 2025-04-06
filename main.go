@@ -40,8 +40,8 @@ func main() {
 	// Add rate limiter middleware
 	app.Use(limiter.New(limiter.Config{
 		Next: func(c *fiber.Ctx) bool {
-			// skip if non localhost
-			return c.IP() == "127.0.0.1"
+			// skip if localhost or clerk webhook endpoint
+			return c.IP() == "127.0.0.1" || c.Path() == "/webhooks/clerk"
 		},
 		Max:        100,             // max number of requests
 		Expiration: 1 * time.Minute, // per 1 minute

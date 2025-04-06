@@ -12,15 +12,18 @@ type Vendor struct {
 }
 
 type Store struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	VendorID    uint      `json:"vendor_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	StoreLogo   string    `json:"store_logo"`
-	Products    []Product `gorm:"foreignKey:StoreID" json:"products,omitempty"`
-	Services    []Service `gorm:"foreignKey:StoreID" json:"services,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID                   uint      `gorm:"primaryKey" json:"id"`
+	VendorID             uint      `json:"vendor_id"`
+	Name                 string    `json:"name"`
+	Description          string    `json:"description"`
+	StoreLogo            string    `json:"store_logo"`
+	StoreUrl             string    `json:"store_url" validate:"required"`
+	StoreAddress         string    `json:"store_address" validate:"required"`
+	StoreWhatsappContact string    `json:"store_whatsapp_contact" validate:"required"`
+	Products             []Product `gorm:"foreignKey:StoreID" json:"products,omitempty"`
+	Services             []Service `gorm:"foreignKey:StoreID" json:"services,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }
 
 type Product struct {
