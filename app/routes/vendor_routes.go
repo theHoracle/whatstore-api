@@ -10,6 +10,6 @@ func VendorRoutes(app fiber.Router) {
 	app.Put("/vendors/:id", controllers.UpdateVendor)
 	app.Delete("/vendors/:id", controllers.DeleteVendor)
 	app.Get("/vendors/:id", controllers.GetVendor)
-	app.Get("/vendors", controllers.GetAllVendors)      // Enable get all vendors
-	app.Post("/vendors/store", controllers.CreateStore) // Updated path without :id
+	app.Get("/vendors", controllers.GetAllVendors) // Enable get all vendors
+
 }

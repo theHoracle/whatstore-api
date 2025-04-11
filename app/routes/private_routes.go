@@ -11,6 +11,15 @@ func PrivateRoutes(app *fiber.App, db *gorm.DB) {
 	// API group with version and auth middleware
 	api := app.Group("/api/v1", middleware.AuthMiddleware(db))
 
+	// vendors management
+	VendorRoutes(api)
+
+	// store management
+	StoreRoutes(api)
+
+	// order management
+	OrderRoutes(api)
+
 	// Vendor store management
 	stores := api.Group("/stores")
 	{

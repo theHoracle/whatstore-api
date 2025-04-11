@@ -789,6 +789,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/store/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new store for the authenticated vendor",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stores"
+                ],
+                "summary": "Create a new store",
+                "parameters": [
+                    {
+                        "description": "Store details",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateStoreRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Store"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/stores/{id}": {
             "get": {
                 "description": "Get detailed information about a store including its products and services",
@@ -1304,7 +1361,6 @@ const docTemplate = `{
         "models.CreateProductRequest": {
             "type": "object",
             "required": [
-                "image_url",
                 "name",
                 "price",
                 "stock"
@@ -1316,8 +1372,11 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
-                "image_url": {
-                    "type": "string"
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "name": {
                     "type": "string"
@@ -1331,14 +1390,20 @@ const docTemplate = `{
                 }
             }
         },
-        "models.CreateVendorRequest": {
+        "models.CreateStoreRequest": {
             "type": "object",
             "required": [
+                "store_address",
                 "store_description",
                 "store_logo",
-                "store_name"
+                "store_name",
+                "store_url",
+                "store_whatsapp_contact"
             ],
             "properties": {
+                "store_address": {
+                    "type": "string"
+                },
                 "store_description": {
                     "type": "string"
                 },
@@ -1347,6 +1412,20 @@ const docTemplate = `{
                 },
                 "store_name": {
                     "type": "string"
+                },
+                "store_url": {
+                    "type": "string"
+                },
+                "store_whatsapp_contact": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateVendorRequest": {
+            "type": "object",
+            "properties": {
+                "user": {
+                    "$ref": "#/definitions/models.User"
                 }
             }
         },
@@ -1464,8 +1543,11 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "image_url": {
-                    "type": "string"
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "name": {
                     "type": "string"
@@ -1518,6 +1600,11 @@ const docTemplate = `{
         },
         "models.Store": {
             "type": "object",
+            "required": [
+                "store_address",
+                "store_url",
+                "store_whatsapp_contact"
+            ],
             "properties": {
                 "created_at": {
                     "type": "string"
@@ -1543,7 +1630,16 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.Service"
                     }
                 },
+                "store_address": {
+                    "type": "string"
+                },
                 "store_logo": {
+                    "type": "string"
+                },
+                "store_url": {
+                    "type": "string"
+                },
+                "store_whatsapp_contact": {
                     "type": "string"
                 },
                 "updated_at": {

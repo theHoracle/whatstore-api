@@ -162,7 +162,7 @@ func GetAllVendors(c *fiber.Ctx) error {
 // @Failure 404 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
 // @Security BearerAuth
-// @Router /vendors/store [post]
+// @Router /store/create [post]
 func CreateStore(c *fiber.Ctx) error {
 	db := c.Locals("db").(*gorm.DB)
 	user := c.Locals("user").(*models.User)

@@ -31,7 +31,7 @@ type Product struct {
 	StoreID      uint      `json:"store_id"`
 	Name         string    `json:"name"`
 	Description  string    `json:"description"`
-	ImageURL     string    `json:"image_url"`
+	Images       []string  `json:"images"`
 	Price        float64   `json:"price"`
 	Currency     string    `json:"currency" gorm:"default:NGN"`
 	Stock        int       `json:"stock"`

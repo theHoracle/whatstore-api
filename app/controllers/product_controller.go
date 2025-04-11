@@ -83,7 +83,7 @@ func CreateProduct(c *fiber.Ctx) error {
 		Description: productRequest.Description,
 		Price:       productRequest.Price,
 		StoreID:     uint(storeID),
-		ImageURL:    productRequest.ImageURL,
+		Images:      productRequest.Images,
 		Stock:       productRequest.Stock,
 		Category:    productRequest.Category,
 	}

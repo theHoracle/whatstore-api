@@ -28,8 +28,10 @@ definitions:
         type: string
       description:
         type: string
-      image_url:
-        type: string
+      images:
+        items:
+          type: string
+        type: array
       name:
         type: string
       price:
@@ -38,23 +40,36 @@ definitions:
         minimum: 0
         type: integer
     required:
-    - image_url
     - name
     - price
     - stock
     type: object
-  models.CreateVendorRequest:
+  models.CreateStoreRequest:
     properties:
+      store_address:
+        type: string
       store_description:
         type: string
       store_logo:
         type: string
       store_name:
         type: string
+      store_url:
+        type: string
+      store_whatsapp_contact:
+        type: string
     required:
+    - store_address
     - store_description
     - store_logo
     - store_name
+    - store_url
+    - store_whatsapp_contact
+    type: object
+  models.CreateVendorRequest:
+    properties:
+      user:
+        $ref: '#/definitions/models.User'
     type: object
   models.DashboardStats:
     properties:
@@ -133,8 +148,10 @@ definitions:
         type: string
       id:
         type: integer
-      image_url:
-        type: string
+      images:
+        items:
+          type: string
+        type: array
       name:
         type: string
       price:
@@ -185,12 +202,22 @@ definitions:
         items:
           $ref: '#/definitions/models.Service'
         type: array
+      store_address:
+        type: string
       store_logo:
+        type: string
+      store_url:
+        type: string
+      store_whatsapp_contact:
         type: string
       updated_at:
         type: string
       vendor_id:
         type: integer
+    required:
+    - store_address
+    - store_url
+    - store_whatsapp_contact
     type: object
   models.UpdateOrderStatusRequest:
     properties:
@@ -779,6 +806,42 @@ paths:
       summary: Search services
       tags:
       - services
+  /store/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new store for the authenticated vendor
+      parameters:
+      - description: Store details
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateStoreRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Store'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new store
+      tags:
+      - stores
   /stores/{id}:
     delete:
       description: Delete a store and all associated data
