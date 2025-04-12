@@ -50,5 +50,12 @@ func UpdateUserProfile(c *fiber.Ctx) error {
 		})
 	}
 
+	// Fetch updated user data
+	if err := db.First(user, user.ID).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch updated profile",
+		})
+	}
+
 	return c.JSON(user)
 }

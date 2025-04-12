@@ -45,6 +45,10 @@ func CreateVendor(c *fiber.Ctx) error {
 		UpdatedAt: time.Now(),
 	}
 
+	if err := db.Create(&vendor).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create vendor"})
+	}
+
 	return c.Status(fiber.StatusCreated).JSON(vendor)
 }
 

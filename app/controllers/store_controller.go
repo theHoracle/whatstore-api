@@ -104,25 +104,39 @@ func DeleteStore(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not authorized to delete this store"})
 	}
 
+	// Start transaction
+	tx := db.Begin()
+
 	// Delete all associated products and services
-	if err := db.Where("store_id = ?", store.ID).Delete(&models.Product{}).Error; err != nil {
+	if err := tx.Where("store_id = ?", store.ID).Delete(&models.Product{}).Error; err != nil {
+		tx.Rollback()
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not delete products"})
 	}
 
-	if err := db.Delete(&store).Error; err != nil {
+	if err := tx.Delete(&store).Error; err != nil {
+		tx.Rollback()
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not delete store"})
 	}
 
 	// if vendor has no store set vendor.isActive to false
 	var vendorStores []models.Store
-	if err := db.Where("vendor_id = ?", vendorStore.ID).Find(&vendorStores).Error; err != nil {
+	if err := tx.Where("vendor_id = ?", vendorStore.ID).Find(&vendorStores).Error; err != nil {
+		tx.Rollback()
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch vendor stores"})
 	}
+
 	if len(vendorStores) == 0 {
 		vendorStore.IsActive = false
-		if err := db.Save(&vendorStore).Error; err != nil {
+		if err := tx.Save(&vendorStore).Error; err != nil {
+			tx.Rollback()
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not update vendor"})
 		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not commit transaction"})
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)

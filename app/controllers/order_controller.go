@@ -5,7 +5,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/theHoracle/whatstore-api/app/models"
-	"github.com/theHoracle/whatstore-api/db/database"
 	"gorm.io/gorm"
 )
 
@@ -192,38 +191,40 @@ func GetOrder(c *fiber.Ctx) error {
 // }
 
 func GetStoreOrders(c *fiber.Ctx) error {
-	user := c.Locals("user").(models.User)
+	db := c.Locals("db").(*gorm.DB)
+	user := c.Locals("user").(*models.User)
 	storeID := c.Params("storeId")
 
 	// Verify user owns the store
 	var store models.Store
-	if err := database.DB.Db.Where("id = ? AND vendor_id = ?", storeID, user.Vendor.ID).First(&store).Error; err != nil {
-		return c.Status(403).JSON(fiber.Map{"error": "Not authorized"})
+	if err := db.Where("id = ? AND vendor_id = ?", storeID, user.Vendor.ID).First(&store).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not authorized"})
 	}
 
 	var orders []models.Order
-	if err := database.DB.Db.Where("store_id = ?", storeID).Find(&orders).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch orders"})
+	if err := db.Where("store_id = ?", storeID).Find(&orders).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch orders"})
 	}
 
 	return c.JSON(orders)
 }
 
 func UpdateOrderStatus(c *fiber.Ctx) error {
-	user := c.Locals("user").(models.User)
+	db := c.Locals("db").(*gorm.DB)
+	user := c.Locals("user").(*models.User)
 	orderID := c.Params("id")
 
 	var order models.Order
-	if err := database.DB.Db.Where("id = ? AND user_id = ?", orderID, user.ID).First(&order).Error; err != nil {
-		return c.Status(403).JSON(fiber.Map{"error": "Not authorized"})
+	if err := db.Where("id = ? AND user_id = ?", orderID, user.ID).First(&order).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Order not found"})
 	}
 
 	status := c.Query("status")
 	if status != "" {
 		order.Status = models.OrderStatus(status)
 		// Here we can add payment/escrow release logic when implementing payments
-		if err := database.DB.Db.Save(&order).Error; err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to update order"})
+		if err := db.Save(&order).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update order"})
 		}
 	}
 
