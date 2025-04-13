@@ -8,8 +8,11 @@ import (
 func StoreRoutes(app fiber.Router) {
 	stores := app.Group("/stores")
 
+	// URL availability check
+	stores.Get("/check-url", controllers.CheckStoreUrlAvailability)
+
 	// Store creation
-	stores.Post("/create", controllers.CreateStore) // Updated path without :id
+	stores.Post("/create", controllers.CreateStore)
 
 	// Store management
 	stores.Put("/:id", controllers.UpdateStore)

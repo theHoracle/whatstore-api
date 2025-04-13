@@ -51,7 +51,7 @@ func AuthMiddleware(db *gorm.DB) fiber.Handler {
 
 		// Fetch the user from the database
 		var user models.User
-		if err := db.Where("clerk_id = ?", userID).First(&user).Error; err != nil {
+		if err := db.Preload("Vendor").Preload("Vendor.Stores").Where("clerk_id = ?", userID).First(&user).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 					"error": "User not found in database",

@@ -211,6 +211,34 @@ func CreateStore(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(store)
 }
 
+// CheckStoreUrlAvailability godoc
+// @Summary Check if a store URL is available
+// @Description Check if a store URL is already taken
+// @Tags stores
+// @Accept json
+// @Produce json
+// @Param url query string true "Store URL to check"
+// @Success 200 {object} object{available=boolean}
+// @Failure 400 {object} models.ErrorResponse
+// @Router /stores/check-url [get]
+func CheckStoreUrlAvailability(c *fiber.Ctx) error {
+	db := c.Locals("db").(*gorm.DB)
+	url := c.Query("url")
+
+	if url == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "URL parameter is required",
+		})
+	}
+
+	var count int64
+	db.Model(&models.Store{}).Where("store_url = ?", url).Count(&count)
+
+	return c.JSON(fiber.Map{
+		"available": count == 0,
+	})
+}
+
 var e164Regex = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
 
 func VaidatePhoneNumber(phone string) error {
