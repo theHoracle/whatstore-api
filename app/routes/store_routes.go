@@ -11,12 +11,17 @@ func StoreRoutes(app fiber.Router) {
 	// URL availability check
 	stores.Get("/check-url", controllers.CheckStoreUrlAvailability)
 
-	// Store creation
-	stores.Post("/create", controllers.CreateStore)
-
-	// Store management
+	// Store CRUD operations
+	stores.Post("/", controllers.CreateStore)
 	stores.Put("/:id", controllers.UpdateStore)
 	stores.Delete("/:id", controllers.DeleteStore)
 	stores.Get("/:id", controllers.GetStore)
 	stores.Get("/vendor/:vendorId", controllers.GetAllStores)
+
+	// Store orders
+	stores.Get("/:storeId/orders", controllers.GetStoreOrders)
+
+	// Setup sub-routes
+	ServiceRoutes(app)
+	ProductRoutes(app)
 }

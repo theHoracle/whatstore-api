@@ -11,42 +11,19 @@ func PrivateRoutes(app *fiber.App, db *gorm.DB) {
 	// API group with version and auth middleware
 	api := app.Group("/api/v1", middleware.AuthMiddleware(db))
 
-	// vendors management
+	// Setup route groups
 	VendorRoutes(api)
-
-	// store management
 	StoreRoutes(api)
-
-	// order management
 	OrderRoutes(api)
 
-	// Vendor store management
-	stores := api.Group("/stores")
-	{
-		// Store products management
-		stores.Post("/:storeId/products", controllers.CreateProduct)
-		stores.Put("/:storeId/products/:id", controllers.UpdateProduct)
-		stores.Delete("/:storeId/products/:id", controllers.DeleteProduct)
-
-		// Store orders
-		stores.Get("/:storeId/orders", controllers.GetStoreOrders)
-	}
-
-	// User profile and orders
+	// User Management Routes
 	users := api.Group("/users")
 	{
 		users.Get("/me", controllers.GetUserProfile)
 		users.Put("/me", controllers.UpdateUserProfile)
 	}
 
-	orders := api.Group("/orders")
-	{
-		orders.Get("/", controllers.GetUserOrders)
-		orders.Post("/", controllers.CreateOrder)
-		orders.Get("/:id", controllers.GetOrder)
-	}
-
-	// Admin dashboard routes
+	// Admin Routes
 	admin := api.Group("/admin", middleware.AuthMiddleware(db))
 	{
 		admin.Get("/stats", controllers.GetStats)

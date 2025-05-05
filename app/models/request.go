@@ -49,3 +49,19 @@ type CreateStoreRequest struct {
 	StoreAddress         string `json:"store_address" validate:"required"`
 	StoreWhatsappContact string `json:"store_whatsapp_contact" validate:"required"`
 }
+
+type CreateServiceRequest struct {
+	Name        string  `json:"name" validate:"required"`
+	Description string  `json:"description"`
+	Rate        float64 `json:"rate" validate:"required"`
+	Currency    string  `json:"currency" default:"NGN"`
+	ImageURL    string  `json:"image_url"`
+}
+
+type UpdateServiceRequest struct {
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Rate        float64 `json:"rate"`
+	Currency    string  `json:"currency"`
+	ImageURL    string  `json:"image_url"`
+}
